@@ -1,0 +1,15 @@
+# Rastreamento e geofence
+
+No mapa, **Iniciar** solicita localização e ativa `navigator.geolocation.watchPosition()` com alta precisão. O marcador acompanha cada atualização, e a `Polyline` desenha o caminho da sessão em memória, inclusive para visitantes sem login. **Pausar** executa `clearWatch()` e conserva o desenho; **Retomar** começa outro trecho, sem ligar o intervalo pausado. **Encerrar rota** também limpa o watcher e encerra a sessão; o desenho permanece até iniciar outra rota. Trocar usuário ou rota selecionada limpa a sessão. A desmontagem do rastreamento limpa watcher e temporizador.
+
+O caminho visual guarda até 10 mil posições e não é salvo continuamente no Supabase. Recarregar a página perde esse desenho. O histórico de evidências de visitas permanece no banco existente. Não há nova tabela, dependência ou migration.
+
+O frontend calcula distâncias aos estabelecimentos com Haversine e só solicita validação quando está próximo, saiu da área ou há visita em andamento. Chamadas respeitam intervalo mínimo de 25 segundos e exigem uma posição recente. O servidor continua como autoridade: verifica coordenadas, precisão, raio, aprovação do estabelecimento, participação na rota, tempo mínimo, máximo e interrupções de monitoramento. Entrada inicia a contagem; atingir o mínimo com presença válida conclui a visita e registra uma única transação de pontos. As constraints e o bloqueio transacional existentes impedem repetir a recompensa pela mesma visita.
+
+São persistidas apenas evidências de visita: entrada, confirmações espaçadas de permanência, saída/invalidação e conclusão. Confirmações durante a permanência são necessárias para validar o tempo no servidor; não há uma gravação para cada evento do GPS. Movimento fora dos geofences não cria amostras. Pausar/encerrar solicita o cancelamento da visita ativa pela ação já existente; em falhas de rede, o servidor invalida lacunas superiores à regra configurada. O tempo pausado não deve ser utilizado para ganhar pontos.
+
+As cores dos cadastros permanecem azul (não visitado), amarelo (dentro do raio com precisão suficiente), verde (concluído) e roxo (recompensa especial), com a prioridade já existente. Os pontos informativos da Overpass não ganham geofence nem recompensas automaticamente.
+
+Use HTTPS na Vercel ou localhost no desenvolvimento e permita a localização. Mobile/PWA precisa permanecer aberto e conectado para validar visitas; o sistema operacional pode suspender GPS em segundo plano. Há mensagens para permissão negada, ausência de sinal e timeout. Quando o dispositivo fica parado, são solicitadas posições novas espaçadamente para não validar permanência reutilizando coordenadas antigas. O desenho separa lacunas superiores a dois minutos e pausas explícitas.
+
+Implementação reaproveitada: `src/hooks/use-tracking.ts`, `src/components/travel-map.tsx`, `src/components/app.tsx`, `src/server/tracking.ts` e `src/lib/tracking.ts`. Testes de geofence, tempo, recompensa única e ausência de gravações fora dos locais em `tests/tracking.test.ts` e `tests/visits.test.ts`.

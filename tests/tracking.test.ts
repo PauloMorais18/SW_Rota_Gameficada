@@ -53,6 +53,15 @@ test('inaccurate GPS and foreign participation do not save data', async () => {
   await assert.rejects(() => trackForUser({ ...input(), participationId: 'foreign' }, { chave: 'user' }, client));
   assert.equal(state.writes, 0);
 });
+test('movement outside registered geofences does not persist GPS samples', async () => {
+  const { state, client, input } = fixture();
+  const outside = input(); outside.location.latitude += 0.1;
+  await trackForUser(outside, { chave: 'user' }, client);
+  assert.equal(state.writes, 0);
+  assert.equal(state.visit, null);
+  assert.equal(state.awarded, 0);
+});
+
 test('marker priority and freshness validation', () => {
   assert.equal(markerStatus(true, true, true).color, '#229d70');
   assert.equal(markerStatus(false, true, true).color, '#dca51b');

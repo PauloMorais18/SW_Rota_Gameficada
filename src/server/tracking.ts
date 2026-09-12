@@ -52,7 +52,9 @@ export async function trackForUser(input: { sessionId: string; participationId?:
         distance = candidate.distance; changed = true; message = `Você chegou a ${p.name}. Contagem iniciada!`; break;
       }
     }
-    const point = await tx.locationSample.create({ data: { userId: user.chave, sessionId: input.sessionId, participationId: participation?.chave, visitId: visit?.chave, latitude: loc.latitude, longitude: loc.longitude, accuracy: loc.accuracy, distance, capturedAt: new Date(loc.timestamp) }, select: { chave: true, latitude: true, longitude: true, accuracy: true, capturedAt: true, datahoracad: true } });
+    // Persist only visit evidence (entry, periodic dwell confirmation, exit/completion).
+    // The live route is held by the browser, not written on every GPS update.
+    const point = visit ? await tx.locationSample.create({ data: { userId: user.chave, sessionId: input.sessionId, participationId: participation?.chave, visitId: visit.chave, latitude: loc.latitude, longitude: loc.longitude, accuracy: loc.accuracy, distance, capturedAt: new Date(loc.timestamp) }, select: { chave: true, latitude: true, longitude: true, accuracy: true, capturedAt: true, datahoracad: true } }) : undefined;
     return { point, message, changed };
   }, { maxWait: 10000, timeout: 15000 });
 }
