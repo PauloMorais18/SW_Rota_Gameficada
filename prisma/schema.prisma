@@ -8,7 +8,39 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model Coupon {
+  chave String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativo Boolean @default(true)
+  datahoracad DateTime @default(now()) @db.Timestamp(3)
+  datahoraalt DateTime @default(now()) @updatedAt @db.Timestamp(3)
+  placeId String @db.Uuid
+  titulo String
+  percentual Int
+  expiresAt DateTime @db.Timestamp(3)
+  limite Int
+  token String @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  place Place @relation(fields: [placeId], references: [chave], onDelete: NoAction, onUpdate: NoAction)
+  uses CouponUse[]
+  @@index([placeId], map: "cupons_place_idx")
+  @@map("cupons")
+}
+
+model CouponUse {
+  chave String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativo Boolean @default(true)
+  datahoracad DateTime @default(now()) @db.Timestamp(3)
+  datahoraalt DateTime @default(now()) @updatedAt @db.Timestamp(3)
+  couponId String @db.Uuid
+  userId String @db.Uuid
+  coupon Coupon @relation(fields: [couponId], references: [chave], onDelete: NoAction, onUpdate: NoAction)
+  user User @relation(fields: [userId], references: [chave], onDelete: NoAction, onUpdate: NoAction)
+  @@unique([couponId, userId])
+  @@index([userId], map: "usos_cupons_user_idx")
+  @@map("usos_cupons")
+}
+
 model User {
+  couponUses CouponUse[]
   chave          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   ativo          Boolean              @default(true)
   datahoraalt    DateTime             @default(now()) @updatedAt
@@ -32,6 +64,7 @@ model User {
 }
 
 model Place {
+  coupons Coupon[]
   chave        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   ativo        Boolean     @default(true)
   datahoraalt  DateTime    @default(now()) @updatedAt

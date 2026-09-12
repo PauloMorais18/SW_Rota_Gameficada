@@ -1,5 +1,6 @@
 import { isSameOriginRequest } from '../lib/request-origin.js';
 import { trackLocation } from './tracking.js';
+import { couponAction } from './coupons.js';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { cookies } from './http.js';
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
     if (raw.length > 64000) throw new ApiError(413, 'Requisição muito grande.');
     const body = JSON.parse(raw);
     const action = z.string().parse(body.action);
+    if (['couponList', 'couponCreate', 'couponDisable', 'couponPreview', 'couponRedeem'].includes(action)) return Response.json(await couponAction(action, body));
     if (action === 'trackLocation') return Response.json(await trackLocation(body));
     if (action === 'login' || action === 'register' || action === 'demo') {
       const input = z.object({ email: z.string().email().max(254).transform(v => v.toLowerCase()), password: z.string().min(8).max(72), name: text.optional(), role: z.enum(['VISITANTE', 'ESTABELECIMENTO']).optional() });

@@ -144,3 +144,7 @@ Serviços Overpass e Taginfo, endpoints, funcionamento, estrutura e limitações: [
 ## Rastreamento da rota e geofence
 
 Consulte [rastreamento e geofence](docs/tracking.md) para os controles Iniciar/Pausar/Encerrar, caminho em tempo real e regras de persistência. Esta seção substitui a descrição anterior de Polyline composta apenas por pontos salvos no banco.
+
+## Cupons de desconto
+
+Fluxo de geração, QR Code, utilização e estrutura do banco: [cupons de desconto](docs/coupons.md).
