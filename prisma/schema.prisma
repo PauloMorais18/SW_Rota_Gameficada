@@ -1,215 +1,256 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
-  provider = "postgresql"
-  url = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
+
+model User {
+  chave          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativo          Boolean              @default(true)
+  datahoraalt    DateTime             @default(now()) @updatedAt
+  datahoracad    DateTime             @default(now())
+  name           String
+  email          String               @unique
+  passwordHash   String
+  googleSubject  String?              @unique
+  role           Role                 @default(VISITANTE)
+  city           String               @default("Florianópolis, SC")
+  stars          Int                  @default(0)
+  starsExpiresAt DateTime?
+  reviews        Review[]
+  places         Place[]
+  routes         RouteParticipation[]
+  points         PointTransaction[]
+  visits         Visit[]
+  samples        LocationSample[]
+
+  @@map("usuarios")
+}
+
+model Place {
+  chave        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativo        Boolean     @default(true)
+  datahoraalt  DateTime    @default(now()) @updatedAt
+  datahoracad  DateTime    @default(now())
+  name         String
+  description  String
+  category     String
+  type         PlaceType   @default(ESTABELECIMENTO)
+  approval     Approval    @default(PENDENTE)
+  address      String
+  latitude     Float
+  longitude    Float
+  radiusMeters Int         @default(150)
+  specialReward String     @default("")
+  minMinutes   Int         @default(5)
+  maxMinutes   Int         @default(180)
+  photos       String[]    @default([])
+  phone        String      @default("")
+  website      String      @default("")
+  hours        String      @default("")
+  ownerId      String?     @db.Uuid
+  reviews      Review[]
+  owner        User?       @relation(fields: [ownerId], references: [chave])
+  stops        RouteStop[]
+  visits       Visit[]
+
+  @@map("locais")
+}
+
+model Visit {
+  chave             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativo             Boolean           @default(true)
+  datahoraalt       DateTime          @default(now()) @updatedAt
+  datahoracad       DateTime          @default(now())
+  userId            String            @db.Uuid
+  placeId           String            @db.Uuid
+  status            VisitStatus       @default(EM_ANDAMENTO)
+  startedAt         DateTime          @default(now())
+  endedAt           DateTime?
+  lastSeenAt        DateTime          @default(now())
+  dwellSeconds      Int               @default(0)
+  minMinutes        Int
+  maxMinutes        Int
+  radiusMeters      Int
+  maxAccuracyMeters Int
+  maxGapSeconds     Int
+  awardedPoints     Int
+  reason            String?
+  samples           LocationSample[]
+  review            Review?
+  transaction       PointTransaction?
+  place             Place             @relation(fields: [placeId], references: [chave])
+  user              User              @relation(fields: [userId], references: [chave])
+
+  @@index([userId, status])
+  @@map("visitas")
+}
+
+model LocationSample {
+  chave       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativo       Boolean  @default(true)
+  datahoraalt DateTime @default(now()) @updatedAt
+  datahoracad DateTime @default(now())
+  visitId     String?  @db.Uuid
+  userId      String?  @db.Uuid
+  sessionId   String?  @db.Uuid
+  participationId String? @db.Uuid
+  capturedAt  DateTime @default(now())
+  latitude    Float
+  longitude   Float
+  accuracy    Float
+  distance    Float
+  visit       Visit?   @relation(fields: [visitId], references: [chave])
+  user        User?    @relation(fields: [userId], references: [chave])
+  participation RouteParticipation? @relation(fields: [participationId], references: [chave])
+
+  @@index([userId, sessionId, datahoracad])
+
+  @@map("amostras_localizacao")
+}
+
+model Review {
+  chave       String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativo       Boolean           @default(true)
+  datahoraalt DateTime          @default(now()) @updatedAt
+  datahoracad DateTime          @default(now())
+  userId      String            @db.Uuid
+  placeId     String            @db.Uuid
+  visitId     String            @unique @db.Uuid
+  rating      Int
+  comment     String
+  place       Place             @relation(fields: [placeId], references: [chave])
+  user        User              @relation(fields: [userId], references: [chave])
+  visit       Visit             @relation(fields: [visitId], references: [chave])
+  transaction PointTransaction?
+
+  @@map("avaliacoes")
+}
+
+model PointTransaction {
+  chave       String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativo       Boolean     @default(true)
+  datahoraalt DateTime    @default(now()) @updatedAt
+  datahoracad DateTime    @default(now())
+  userId      String      @db.Uuid
+  source      PointSource
+  amount      Int
+  description String
+  visitId     String?     @unique @db.Uuid
+  reviewId    String?     @unique @db.Uuid
+  review      Review?     @relation(fields: [reviewId], references: [chave])
+  user        User        @relation(fields: [userId], references: [chave])
+  visit       Visit?      @relation(fields: [visitId], references: [chave])
+
+  @@index([userId, datahoracad])
+  @@map("transacoes_pontos")
+}
+
+model Route {
+  chave        String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativo        Boolean              @default(true)
+  datahoraalt  DateTime             @default(now()) @updatedAt
+  datahoracad  DateTime             @default(now())
+  name         String
+  description  String
+  image        String
+  category     String
+  duration     String
+  participants RouteParticipation[]
+  stops        RouteStop[]
+
+  @@map("rotas")
+}
+
+model RouteStop {
+  chave       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativo       Boolean  @default(true)
+  datahoraalt DateTime @default(now()) @updatedAt
+  datahoracad DateTime @default(now())
+  routeId     String   @db.Uuid
+  placeId     String   @db.Uuid
+  position    Int
+  place       Place    @relation(fields: [placeId], references: [chave])
+  route       Route    @relation(fields: [routeId], references: [chave])
+
+  @@unique([routeId, placeId])
+  @@unique([routeId, position])
+  @@map("rota_paradas")
+}
+
+model RouteParticipation {
+  chave       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativo       Boolean  @default(true)
+  datahoraalt DateTime @default(now()) @updatedAt
+  datahoracad DateTime @default(now())
+  userId      String   @db.Uuid
+  routeId     String   @db.Uuid
+  route       Route    @relation(fields: [routeId], references: [chave])
+  user        User     @relation(fields: [userId], references: [chave])
+  samples     LocationSample[]
+
+  @@unique([userId, routeId])
+  @@map("participacoes_rotas")
+}
+
+model UsefulPhone {
+  chave       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ativo       Boolean  @default(true)
+  datahoraalt DateTime @default(now()) @updatedAt
+  datahoracad DateTime @default(now())
+  name        String
+  number      String
+  category    String
+  description String
+
+  @@map("telefones_uteis")
+}
+
+model PlatformSettings {
+  chave              String   @id @default("platform")
+  ativo              Boolean  @default(true)
+  datahoraalt        DateTime @default(now()) @updatedAt
+  datahoracad        DateTime @default(now())
+  visitPoints        Int      @default(100)
+  reviewPoints       Int      @default(25)
+  cooldownHours      Int      @default(24)
+  maxAccuracyMeters  Int      @default(100)
+  maxGapSeconds      Int      @default(120)
+  starExpirationDays Int      @default(365)
+  starRule           String   @default("PENDENTE_DEFINICAO")
+
+  @@map("configuracoes_plataforma")
+}
+
 enum Role {
   VISITANTE
   ESTABELECIMENTO
   ADMIN
 }
+
 enum PlaceType {
   ESTABELECIMENTO
   PONTO_TURISTICO
 }
+
 enum Approval {
   PENDENTE
   APROVADO
   REJEITADO
 }
+
 enum VisitStatus {
   EM_ANDAMENTO
   VALIDA
   INVALIDA
   CANCELADA
 }
+
 enum PointSource {
   VISITA
   AVALIACAO
-}
-model User {
-  chave String @id @default(uuid()) @db.Uuid
-  ativo Boolean @default(true)
-  datahoraalt DateTime @updatedAt
-  datahoracad DateTime @default(now())
-  name String
-  email String @unique
-  passwordHash String
-  role Role @default(VISITANTE)
-  city String @default("Florianópolis, SC")
-  stars Int @default(0)
-  starsExpiresAt DateTime?
-  places Place[]
-  visits Visit[]
-  reviews Review[]
-  points PointTransaction[]
-  routes RouteParticipation[]
-  @@map("usuarios")
-}
-model Place {
-  chave String @id @default(uuid()) @db.Uuid
-  ativo Boolean @default(true)
-  datahoraalt DateTime @updatedAt
-  datahoracad DateTime @default(now())
-  name String
-  description String
-  category String
-  type PlaceType @default(ESTABELECIMENTO)
-  approval Approval @default(PENDENTE)
-  address String
-  latitude Float
-  longitude Float
-  radiusMeters Int @default(150)
-  minMinutes Int @default(5)
-  maxMinutes Int @default(180)
-  photos String[]
-  phone String @default("")
-  website String @default("")
-  hours String @default("")
-  ownerId String? @db.Uuid
-  owner User? @relation(fields: [ownerId], references: [chave])
-  visits Visit[]
-  reviews Review[]
-  stops RouteStop[]
-  @@map("locais")
-}
-model Visit {
-  chave String @id @default(uuid()) @db.Uuid
-  ativo Boolean @default(true)
-  datahoraalt DateTime @updatedAt
-  datahoracad DateTime @default(now())
-  userId String @db.Uuid
-  placeId String @db.Uuid
-  user User @relation(fields: [userId], references: [chave])
-  place Place @relation(fields: [placeId], references: [chave])
-  status VisitStatus @default(EM_ANDAMENTO)
-  startedAt DateTime @default(now())
-  endedAt DateTime?
-  lastSeenAt DateTime @default(now())
-  dwellSeconds Int @default(0)
-  minMinutes Int
-  maxMinutes Int
-  radiusMeters Int
-  maxAccuracyMeters Int
-  maxGapSeconds Int
-  awardedPoints Int
-  reason String?
-  samples LocationSample[]
-  review Review?
-  transaction PointTransaction?
-  @@index([userId, status])
-  @@map("visitas")
-}
-model LocationSample {
-  chave String @id @default(uuid()) @db.Uuid
-  ativo Boolean @default(true)
-  datahoraalt DateTime @updatedAt
-  datahoracad DateTime @default(now())
-  visitId String @db.Uuid
-  visit Visit @relation(fields: [visitId], references: [chave])
-  latitude Float
-  longitude Float
-  accuracy Float
-  distance Float
-  @@map("amostras_localizacao")
-}
-model Review {
-  chave String @id @default(uuid()) @db.Uuid
-  ativo Boolean @default(true)
-  datahoraalt DateTime @updatedAt
-  datahoracad DateTime @default(now())
-  userId String @db.Uuid
-  placeId String @db.Uuid
-  visitId String @unique @db.Uuid
-  user User @relation(fields: [userId], references: [chave])
-  place Place @relation(fields: [placeId], references: [chave])
-  visit Visit @relation(fields: [visitId], references: [chave])
-  rating Int
-  comment String
-  transaction PointTransaction?
-  @@map("avaliacoes")
-}
-model PointTransaction {
-  chave String @id @default(uuid()) @db.Uuid
-  ativo Boolean @default(true)
-  datahoraalt DateTime @updatedAt
-  datahoracad DateTime @default(now())
-  userId String @db.Uuid
-  user User @relation(fields: [userId], references: [chave])
-  source PointSource
-  amount Int
-  description String
-  visitId String? @unique @db.Uuid
-  reviewId String? @unique @db.Uuid
-  visit Visit? @relation(fields: [visitId], references: [chave])
-  review Review? @relation(fields: [reviewId], references: [chave])
-  @@index([userId, datahoracad])
-  @@map("transacoes_pontos")
-}
-model Route {
-  chave String @id @default(uuid()) @db.Uuid
-  ativo Boolean @default(true)
-  datahoraalt DateTime @updatedAt
-  datahoracad DateTime @default(now())
-  name String
-  description String
-  image String
-  category String
-  duration String
-  stops RouteStop[]
-  participants RouteParticipation[]
-  @@map("rotas")
-}
-model RouteStop {
-  chave String @id @default(uuid()) @db.Uuid
-  ativo Boolean @default(true)
-  datahoraalt DateTime @updatedAt
-  datahoracad DateTime @default(now())
-  routeId String @db.Uuid
-  placeId String @db.Uuid
-  route Route @relation(fields: [routeId], references: [chave])
-  place Place @relation(fields: [placeId], references: [chave])
-  position Int
-  @@unique([routeId, placeId])
-  @@unique([routeId, position])
-  @@map("rota_paradas")
-}
-model RouteParticipation {
-  chave String @id @default(uuid()) @db.Uuid
-  ativo Boolean @default(true)
-  datahoraalt DateTime @updatedAt
-  datahoracad DateTime @default(now())
-  userId String @db.Uuid
-  routeId String @db.Uuid
-  user User @relation(fields: [userId], references: [chave])
-  route Route @relation(fields: [routeId], references: [chave])
-  @@unique([userId, routeId])
-  @@map("participacoes_rotas")
-}
-model UsefulPhone {
-  chave String @id @default(uuid()) @db.Uuid
-  ativo Boolean @default(true)
-  datahoraalt DateTime @updatedAt
-  datahoracad DateTime @default(now())
-  name String
-  number String
-  category String
-  description String
-  @@map("telefones_uteis")
-}
-model PlatformSettings {
-  chave String @id @default("platform")
-  ativo Boolean @default(true)
-  datahoraalt DateTime @updatedAt
-  datahoracad DateTime @default(now())
-  visitPoints Int @default(100)
-  reviewPoints Int @default(25)
-  cooldownHours Int @default(24)
-  maxAccuracyMeters Int @default(100)
-  maxGapSeconds Int @default(120)
-  starExpirationDays Int @default(365)
-  starRule String @default("PENDENTE_DEFINICAO")
-  @@map("configuracoes_plataforma")
 }

@@ -1,4 +1,5 @@
 import { isSameOriginRequest } from '../lib/request-origin.js';
+import { trackLocation } from './tracking.js';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { cookies } from './http.js';
@@ -9,7 +10,7 @@ import { advanceDwell, distanceMeters, validatePresence } from '../lib/visits.js
 const uuid = z.string().uuid();
 const text = z.string().trim().min(1).max(300);
 const coordinate = z.object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180), accuracy: z.number().nonnegative().max(100000), timestamp: z.number().refine(v => Math.abs(Date.now() - v) < 30000, 'Localização desatualizada. Tente novamente.') });
-const placeSchema = z.object({ chave: uuid.optional(), name: text, description: z.string().trim().min(10).max(3000), category: text, type: z.enum(['ESTABELECIMENTO', 'PONTO_TURISTICO']), address: text, latitude: z.coerce.number().min(-90).max(90), longitude: z.coerce.number().min(-180).max(180), minMinutes: z.coerce.number().int().min(1).max(1440), maxMinutes: z.coerce.number().int().min(1).max(1440), photos: z.array(z.string().url().refine(v => v.startsWith('https://'))).min(1).max(8), phone: z.string().max(50), website: z.string().max(300).refine(v => !v || /^https:\/\//.test(v)), hours: z.string().max(500) }).refine(v => v.minMinutes <= v.maxMinutes, 'Tempo máximo deve ser maior ou igual ao mínimo.');
+const placeSchema = z.object({ chave: uuid.optional(), name: text, description: z.string().trim().min(10).max(3000), category: text, type: z.enum(['ESTABELECIMENTO', 'PONTO_TURISTICO']), address: text, latitude: z.coerce.number().min(-90).max(90), longitude: z.coerce.number().min(-180).max(180), radiusMeters: z.coerce.number().int().min(10).max(1000).default(150), specialReward: z.string().trim().max(300).optional(), minMinutes: z.coerce.number().int().min(1).max(1440), maxMinutes: z.coerce.number().int().min(1).max(1440), photos: z.array(z.string().url().refine(v => v.startsWith('https://'))).min(1).max(8), phone: z.string().max(50), website: z.string().max(300).refine(v => !v || /^https:\/\//.test(v)), hours: z.string().max(500) }).refine(v => v.minMinutes <= v.maxMinutes, 'Tempo máximo deve ser maior ou igual ao mínimo.');
 const attempts = new Map<string, { count: number; until: number }>();
 function throttle(key: string) {
   const now = Date.now();
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
     if (raw.length > 64000) throw new ApiError(413, 'Requisição muito grande.');
     const body = JSON.parse(raw);
     const action = z.string().parse(body.action);
+    if (action === 'trackLocation') return Response.json(await trackLocation(body));
     if (action === 'login' || action === 'register' || action === 'demo') {
       const input = z.object({ email: z.string().email().max(254).transform(v => v.toLowerCase()), password: z.string().min(8).max(72), name: text.optional(), role: z.enum(['VISITANTE', 'ESTABELECIMENTO']).optional() });
       if (action === 'demo') {
@@ -79,6 +81,7 @@ export async function POST(request: Request) {
         const visit = await tx.visit.findFirst({ where: { chave: id, userId: user.chave }, include: { place: true } });
         if (!visit || visit.status !== 'EM_ANDAMENTO') throw new ApiError(409, 'Esta visita não está em andamento.');
         const now = new Date();
+        if (action === 'heartbeat' && now.getTime() - visit.lastSeenAt.getTime() < 24000) return null;
         if (action === 'cancelVisit') { await tx.visit.update({ where: { chave: id }, data: { status: 'CANCELADA', endedAt: now, reason: 'Cancelada pelo visitante.' } }); return null; }
         const location = coordinate.parse(body.location);
         const distance = distanceMeters(location.latitude, location.longitude, visit.place.latitude, visit.place.longitude);
@@ -112,6 +115,7 @@ export async function POST(request: Request) {
     } else if (action === 'savePlace') {
       await requireUser(['ESTABELECIMENTO', 'ADMIN']);
       const { chave, ...data } = placeSchema.parse(body);
+      if (user.role !== 'ADMIN') delete data.specialReward;
       if (user.role === 'ESTABELECIMENTO' && data.type !== 'ESTABELECIMENTO') throw new ApiError(403, 'Somente administradores cadastram pontos turísticos.');
       if (chave) {
         const existing = await db.place.findUnique({ where: { chave } });

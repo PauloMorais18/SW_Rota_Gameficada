@@ -16,5 +16,5 @@ export async function getAppData() {
     leanFleet.status(),
   ]);
   const progressVisits = user ? await db.visit.findMany({ where: { userId: user.chave, status: 'VALIDA' }, select: { placeId: true, startedAt: true } }) : [];
-  return { user: user ? { ...user, stars: visibleStars(user.stars, user.starsExpiresAt) } : null, places, routes: routes.map(route => ({ ...route, completedPlaceIds: route.participants.length ? route.stops.filter(stop => progressVisits.some(v => v.placeId === stop.placeId && v.startedAt >= route.participants[0].datahoracad)).map(stop => stop.placeId) : [] })), phones, settings, visits, points, users, fleet, demo: process.env.ALLOW_DEMO_LOGIN === 'true' };
+  return { user: user ? { ...user, stars: visibleStars(user.stars, user.starsExpiresAt) } : null, places, routes: routes.map(route => ({ ...route, completedPlaceIds: route.participants.length ? route.stops.filter(stop => progressVisits.some(v => v.placeId === stop.placeId && v.startedAt >= route.participants[0].datahoracad)).map(stop => stop.placeId) : [] })), phones, settings, visits, points, users, fleet, googleEnabled: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI), demo: process.env.ALLOW_DEMO_LOGIN === 'true' };
 }
