@@ -3,15 +3,15 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNod
 import { lazy, Suspense } from 'react';
 import AuthForm from './auth-form';
 import UserMenu from './user-menu';
+import InstallAppButton from './install-app-button';
 import { useTracking } from '@/hooks/use-tracking';
 import type { TravelMapProps } from './travel-map';
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, Bell, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronRight, Clock3, Compass, Download, Footprints, Heart, Home, LayoutDashboard, List, LogOut, Map, MapPin, Menu, Navigation, Phone, Plus, Route as RouteIcon, Search, Settings2, ShieldCheck, Sparkles, Star, Store, Ticket, Trophy, Users, Wallet, X } from 'lucide-react';
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, Bell, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronRight, Clock3, Compass, Footprints, Heart, Home, LayoutDashboard, List, LogOut, Map, MapPin, Menu, Navigation, Phone, Plus, Route as RouteIcon, Search, Settings2, ShieldCheck, Sparkles, Star, Store, Ticket, Trophy, Users, Wallet, X } from 'lucide-react';
 import type { AppData, Place, Route } from '@/lib/types';
 const LazyMap = lazy(() => import('./travel-map'));
 function PlacesMap(props: TravelMapProps) { return <Suspense fallback={<div className="empty">Carregando mapa…</div>}><LazyMap {...props} /></Suspense>; }
 type View = 'home' | 'explore' | 'routes' | 'points' | 'profile' | 'phones' | 'dashboard' | 'businesses' | 'users' | 'settings';
 type Modal = { kind: 'place'; place: Place } | { kind: 'auth' } | { kind: 'review'; visitId: string } | { kind: 'editPlace'; place?: Place } | { kind: 'editRoute'; route?: Route } | { kind: 'editPhone'; phone?: AppData['phones'][number] } | null;
-type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 const names: Record<View, string> = { home: 'Início', explore: 'Explorar', routes: 'Rotas', points: 'Meus pontos', profile: 'Meu perfil', phones: 'Telefones úteis', dashboard: 'Dashboard', businesses: 'Estabelecimentos', users: 'Usuários', settings: 'Configurações' };
 const categories = ['Todos', 'Gastronomia', 'Natureza', 'Cultura', 'Hospedagem'];
 const categoryIcons = [Compass, Store, Sparkles, Map, Home];
@@ -29,7 +29,6 @@ export default function App() {
   const [menu, setMenu] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ message: string; error?: boolean } | null>(null);
-  const [install, setInstall] = useState<InstallEvent | null>(null);
   const [now, setNow] = useState(Date.now());
   const [gpsError, setGpsError] = useState('');
   const mounted = useRef(true);
@@ -40,7 +39,7 @@ export default function App() {
     if (mounted.current) { setData(result); setLoadError(''); }
   }, []);
   useEffect(() => { mounted.current = true; refresh().catch(e => setLoadError(e.message)); const hash = location.hash.slice(1) as View; if (hash in names) setView(hash); const nav = () => { const h = location.hash.slice(1) as View; if (h in names) setView(h); }; window.addEventListener('hashchange', nav); return () => { mounted.current = false; window.removeEventListener('hashchange', nav); }; }, [refresh]);
-  useEffect(() => { if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {}); const handler = (e: Event) => { e.preventDefault(); setInstall(e as InstallEvent); }; window.addEventListener('beforeinstallprompt', handler); return () => window.removeEventListener('beforeinstallprompt', handler); }, []);
+  useEffect(() => { if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(error => console.error('Falha ao registrar PWA:', error)); }, []);
   useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 6500); return () => clearTimeout(t); } }, [toast]);
   const go = (v: View) => { setView(v); location.hash = v; setMenu(false); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const act = useCallback(async (action: string, payload: Record<string, unknown> = {}, quiet = false) => {
@@ -98,7 +97,7 @@ export default function App() {
     <header className="topbar"><button className="mobile-menu icon-button" aria-label="Abrir menu" onClick={() => setMenu(!menu)}><Menu /></button><button className="brand-button" onClick={() => go('home')}><Brand /></button><div className="city-pill"><MapPin size={15} /><span>Florianópolis, SC</span><span className="city-dot" /></div><form className="global-search" onSubmit={e => { e.preventDefault(); go('explore'); }}><Search size={18} /><input aria-label="Buscar lugares e experiências" placeholder="Qual será sua próxima descoberta?" value={query} onChange={e => setQuery(e.target.value)} /><kbd>↵</kbd></form><div className="header-actions"><button className="icon-button notification" aria-label="Ver avaliações pendentes" onClick={() => go('points')}><Bell size={20} />{pendingReview.length > 0 && <i />}</button>{user ? <UserMenu key={user.chave} user={user} onProfile={() => go('profile')} /> : <button className="primary small" onClick={() => setModal({ kind: 'auth' })}>Entrar <ArrowRight size={16} /></button>}</div></header>
     {menu && <button className="menu-shade" aria-label="Fechar menu" onClick={() => setMenu(false)} />}
     <aside className={`sidebar ${menu ? 'open' : ''}`}><div className="nav-label">DESCUBRA A CIDADE</div><nav>{navItems.map(([v, Icon]) => <button key={v} className={view === v ? 'nav-item active' : 'nav-item'} onClick={() => go(v)}><Icon size={20} /><span>{names[v]}</span>{v === 'points' && visitor && <span className="nav-count">{fmt(balance)}</span>}{view === v && <span className="active-dot" />}</button>)}</nav>{(admin || business) && <><div className="nav-label management-label">{admin ? 'ADMINISTRAÇÃO' : 'ÁREA DO PARCEIRO'}</div><nav>{([['dashboard', LayoutDashboard], ['businesses', Store], ...(admin ? [['users', Users], ['settings', Settings2]] : [])] as [View, typeof Home][]).map(([v, Icon]) => <button key={v} className={`nav-item ${view === v ? 'active' : ''}`} onClick={() => go(v)}><Icon size={20} />{names[v]}</button>)}</nav></>}
-      <div className="sidebar-bottom"><div className="adventure-card"><div className="adventure-icon"><Sparkles size={21} /></div><h3>Saia da rotina.<br />Entre em uma rota.</h3><p>Novos lugares, boas histórias<br />e pontos pelo caminho.</p><button onClick={() => go('routes')}>Encontre sua rota <ArrowUpRight size={16} /></button></div><button className={`nav-item ${view === 'profile' ? 'active' : ''}`} onClick={() => go('profile')}><Users size={19} />Meu perfil</button><button className="nav-item install-button" onClick={async () => { if (install) { await install.prompt(); await install.userChoice; setInstall(null); } else setToast({ message: 'No menu do navegador, escolha “Instalar aplicativo” ou “Adicionar à Tela de Início”.' }); }}><Download size={19} />Instalar aplicativo</button><div className="sidebar-footer"><span className="city-dot" /> Feito para descobrir mais <Heart size={12} /></div></div></aside>
+      <div className="sidebar-bottom"><div className="adventure-card"><div className="adventure-icon"><Sparkles size={21} /></div><h3>Saia da rotina.<br />Entre em uma rota.</h3><p>Novos lugares, boas histórias<br />e pontos pelo caminho.</p><button onClick={() => go('routes')}>Encontre sua rota <ArrowUpRight size={16} /></button></div><button className={`nav-item ${view === 'profile' ? 'active' : ''}`} onClick={() => go('profile')}><Users size={19} />Meu perfil</button><InstallAppButton /><div className="sidebar-footer"><span className="city-dot" /> Feito para descobrir mais <Heart size={12} /></div></div></aside>
     <main className="main-content">
       {activeVisit && <section className="active-visit"><div className="pulse-dot" /><div><strong>Você está em {activeVisit.place.name}</strong><p>{Math.floor(Math.max(0, (now - new Date(activeVisit.startedAt).getTime()) / 1000) / 60)} min decorridos • {Math.floor(activeVisit.dwellSeconds / 60)} min validados • mínimo {activeVisit.minMinutes} / máximo {activeVisit.maxMinutes} min</p><small>{tracking.error || gpsError || (tracking.enabled ? tracking.message : 'Ative o GPS para validar automaticamente a permanência.')}</small></div>{!tracking.enabled && <button className="secondary small" onClick={tracking.start}>Retomar GPS</button>}<button className="primary small" disabled={busy} onClick={() => visitAction('finishVisit', activeVisit.chave)}>Finalizar visita</button><button className="text-button" disabled={busy} onClick={() => { tracking.stop(); void act('cancelVisit', { visitId: activeVisit.chave }); }}>Cancelar</button></section>}
       {view === 'home' && <>

@@ -130,3 +130,9 @@ Novas contas Google recebem exclusivamente o perfil VISITANTE. Contas já cadast
 npm test
 npm run build
 ```
+
+### Instalação do aplicativo (PWA)
+
+No menu lateral (no celular, abra o menu compacto), clique em **Instalar aplicativo**. Chrome/Edge abrem a confirmação nativa quando o navegador disponibiliza a instalação. Se não houver um prompt disponível, uma janela explica como instalar pelo menu. No iPhone/iPad, abra no Safari e use Compartilhar → Adicionar à Tela de Início → Adicionar. A instalação depende da confirmação do usuário; não é um download de APK.
+
+Para testar no aparelho, publique na Vercel e abra o endereço HTTPS no navegador. Confirme a instalação e abra o ícone Rota Viva: a aplicação deve aparecer em janela independente. No desktop, localhost também permite testar. Após cancelar, o navegador pode exigir a instalação pelo próprio menu. O app detecta a confirmação de instalação e a execução em modo standalone. O service worker oferece uma página offline; mapas, login e dados ainda precisam de conexão.
