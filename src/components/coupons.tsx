@@ -11,7 +11,7 @@ export default function Coupons({ visitor, places }: { visitor: boolean; places:
  const [rows, setRows] = useState<Row[]>([]), [message, setMessage] = useState(''), [busy, setBusy] = useState(false);
  const [qr, setQr] = useState(''), [token, setToken] = useState(() => new URLSearchParams(location.search).get('coupon') || '');
  const [preview, setPreview] = useState<(Row & { disponivel: boolean }) | null>(null);
- const [scanning, setScanning] = useState(false);
+ const [scanning, setScanning] = useState(visitor && !new URLSearchParams(location.search).get('coupon'));
  const video = useRef<HTMLVideoElement>(null);
  const refresh = async () => { const result = await request('couponList'); setRows(result.rows); };
  useEffect(() => { refresh().catch(e => setMessage(e.message)); }, []);
@@ -35,14 +35,14 @@ export default function Coupons({ visitor, places }: { visitor: boolean; places:
   try { const result = await request(action, data); setMessage(result.message); await refresh(); if (action === 'couponRedeem') { setPreview(null); setToken(''); history.replaceState(null, '', location.pathname + '#coupons'); } return true; }
   catch (e) { setMessage((e as Error).message); return false; } finally { setBusy(false); }
  };
- return <div className="panel"><h2>{visitor ? 'Meus cupons' : 'Cupons de desconto'}</h2><p>Um uso por visitante. O desconto é aplicado pela loja no atendimento.</p>
+ return <div className="panel"><h2>{visitor ? 'Validar cupom' : 'Cupons de desconto'}</h2><p>Um uso por visitante. O desconto é aplicado pela loja no atendimento.</p>
   {message && <p role="status" className="info-box">{message}</p>}
   {visitor ? <><button className="primary" onClick={() => setScanning(v => !v)}>{scanning ? 'Fechar câmera' : 'Escanear QR Code'}</button>{scanning && <video ref={video} style={{ width: '100%', maxWidth: 420 }} muted playsInline />}
    {preview && <div className="panel mt"><h3>{preview.titulo}</h3><p>{preview.percentual}% de desconto • {preview.local}</p><p>Válido até {new Date(preview.expiresAt!).toLocaleString('pt-BR')}</p><button className="primary" disabled={busy || !preview.disponivel} onClick={() => perform('couponRedeem', { token })}>{preview.disponivel ? 'Confirmar uso do cupom' : 'Cupom esgotado'}</button></div>}
   </> : <><form onSubmit={async e => { e.preventDefault(); const form = e.currentTarget; const data = Object.fromEntries(new FormData(form)); if (await perform('couponCreate', { ...data, expiresAt: new Date(String(data.expiresAt)).toISOString() })) form.reset(); }}>
    <label className="field">Estabelecimento<select name="placeId" required>{places.filter(p => p.ativo && p.approval === 'APROVADO').map(p => <option value={p.chave} key={p.chave}>{p.name}</option>)}</select></label>
-   <label className="field">Nome do cupom<input name="titulo" required minLength={3} maxLength={120} placeholder="Desconto no café da tarde" /></label>
-   <div className="form-grid"><label className="field">Desconto (%)<input name="percentual" type="number" min={1} max={100} required /></label><label className="field">Limite total de usos<input name="limite" type="number" min={1} max={100000} required /></label><label className="field">Válido até<input name="expiresAt" type="datetime-local" required /></label></div>
+   <label className="field">Nome do cupom<input name="titulo" defaultValue="Desconto no café da tarde — demonstração" required minLength={3} maxLength={120} placeholder="Desconto no café da tarde" /></label>
+   <div className="form-grid"><label className="field">Desconto (%)<input name="percentual" defaultValue={15} type="number" min={1} max={100} required /></label><label className="field">Limite total de usos<input name="limite" defaultValue={100} type="number" min={1} max={100000} required /></label><label className="field">Válido até<input name="expiresAt" defaultValue={new Date(Date.now() + 30 * 86400000 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)} type="datetime-local" required /></label></div>
    <button className="primary" disabled={busy || !places.some(p => p.ativo && p.approval === 'APROVADO')}>Criar cupom</button>
   </form>{qr && <div className="panel mt"><h3>Escaneie para utilizar o cupom</h3><img src={qr} width={280} height={280} style={{ maxWidth: '100%', height: 'auto' }} alt="QR Code do cupom de desconto" /><button className="secondary" onClick={() => setQr('')}>Fechar QR Code</button></div>}</>}
   <h3 className="mt">{visitor ? 'Cupons utilizados' : 'Seus cupons e utilizações'}</h3><button className="secondary small" onClick={() => refresh().catch(e => setMessage(e.message))}>Atualizar contagem</button>

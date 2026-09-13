@@ -1,6 +1,7 @@
 import { isSameOriginRequest } from '../lib/request-origin.js';
 import { trackLocation } from './tracking.js';
 import { couponAction } from './coupons.js';
+import { demoEnabled } from '../lib/demo.js';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { cookies } from './http.js';
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
     if (action === 'login' || action === 'register' || action === 'demo') {
       const input = z.object({ email: z.string().email().max(254).transform(v => v.toLowerCase()), password: z.string().min(8).max(72), name: text.optional(), role: z.enum(['VISITANTE', 'ESTABELECIMENTO']).optional() });
       if (action === 'demo') {
-        if (process.env.ALLOW_DEMO_LOGIN !== 'true') throw new ApiError(403, 'Demonstração desabilitada.');
+        if (!demoEnabled()) throw new ApiError(403, 'Demonstração desabilitada.');
         const role = z.enum(['VISITANTE', 'ESTABELECIMENTO', 'ADMIN']).parse(body.role);
         const email = { VISITANTE: 'visitante@rota.demo', ESTABELECIMENTO: 'parceiro@rota.demo', ADMIN: 'admin@rota.demo' }[role];
         const user = await db.user.findFirst({ where: { email, ativo: true, role } });
