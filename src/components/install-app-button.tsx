@@ -43,7 +43,7 @@ export default function InstallAppButton() {
       await pending.prompt();
       const choice = await pending.userChoice;
       setMessage(choice.outcome === 'accepted'
-        ? 'Instalação solicitada! Aguarde a confirmação do aparelho e procure o ícone Rota Viva.'
+        ? 'Instalação solicitada! Aguarde a confirmação do aparelho e procure o ícone Rota Gamificada.'
         : 'Instalação cancelada. Você pode tentar novamente pelo menu do navegador.');
     } catch {
       setMessage('O navegador não abriu a instalação. Use as instruções abaixo para instalar pelo menu.');
@@ -59,10 +59,10 @@ export default function InstallAppButton() {
       {installed ? 'Aplicativo instalado' : busy ? 'Aguardando instalação…' : 'Instalar aplicativo'}
     </button>
     {createPortal(<dialog ref={dialog} className="pwa-install-dialog" aria-labelledby="pwa-install-title" onClick={event => { if (event.target === event.currentTarget) dialog.current?.close(); }}>
-      <div className="pwa-install-heading"><h2 id="pwa-install-title">{installed ? 'Aplicativo instalado' : 'Instalar Rota Viva'}</h2><button className="icon-button" aria-label="Fechar instalação" onClick={() => dialog.current?.close()}><X /></button></div>
+      <div className="pwa-install-heading"><h2 id="pwa-install-title">{installed ? 'Aplicativo instalado' : 'Instalar Rota Gamificada'}</h2><button className="icon-button" aria-label="Fechar instalação" onClick={() => dialog.current?.close()}><X /></button></div>
       {message && <p role="status">{message}</p>}
-      {installed ? <p>O Rota Viva está pronto para abrir pelo ícone no seu aparelho.</p> : <>
-        <p>Tenha o Rota Viva na tela inicial e abra a aplicação como um app.</p>
+      {installed ? <p>O Rota Gamificada está pronto para abrir pelo ícone no seu aparelho.</p> : <>
+        <p>Tenha o Rota Gamificada na tela inicial e abra a aplicação como um app.</p>
         {!window.isSecureContext ? <p>Abra o endereço HTTPS publicado na Vercel para instalar no aparelho.</p> : ios ? <ol><li>Abra este site no Safari.</li><li>Toque em <strong>Compartilhar</strong> e em <strong>Adicionar à Tela de Início</strong>.</li><li>Se aparecer, ative <strong>Abrir como App da Web</strong> e toque em <strong>Adicionar</strong>.</li></ol> : <ol><li>Abra este site no {android ? 'Chrome' : 'Chrome ou Microsoft Edge'}.</li><li>No menu <strong>⋮</strong> ou <strong>…</strong>, escolha <strong>Instalar aplicativo</strong>{android ? ' ou Adicionar à tela inicial → Instalar' : ' (ou Aplicativos → Instalar este site como aplicativo)'}.</li><li>Confirme em <strong>Instalar</strong>.</li></ol>}
         {prompt && <button className="primary" disabled={busy} onClick={install}><Download size={18} />Instalar agora</button>}
         <p className="pwa-install-note">Se abriu pelo Instagram ou WhatsApp, use “Abrir no navegador”. A opção de instalação depende do navegador e pode não aparecer se o app já estiver instalado.</p>

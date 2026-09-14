@@ -136,7 +136,7 @@ export default function App() {
     </Dialog>}
   </div>;
 }
-function Brand({ small = false }: { small?: boolean }) { return <span className={`brand ${small ? 'brand-small' : ''}`}><span className="brand-icon"><MapPin size={25} strokeWidth={2.7} /><Sparkles size={12} /></span><span>rota<span className="brand-light">viva</span><small>CADA DESCOBERTA CONTA</small></span></span>; }
+function Brand({ small = false }: { small?: boolean }) { return <span className={`brand ${small ? 'brand-small' : ''}`}><span className="brand-icon"><MapPin size={25} strokeWidth={2.7} /><Sparkles size={12} /></span><span>ROTA<span className="brand-light">GAMIFICADA</span><small>CADA DESCOBERTA CONTA</small></span></span>; }
 function Stat({ icon, label, value, detail, tone }: { icon: ReactNode; label: string; value: string; detail: string; tone: string }) { return <div className="stat-card"><div className={`stat-icon ${tone}`}>{icon}</div><div><span className="stat-label">{label}</span><strong className="stat-value">{value}</strong><span className="stat-detail">{detail}</span></div></div>; }
 function SectionHeader({ eyebrow, title, action, onClick }: { eyebrow: string; title: string; action: string; onClick: () => void }) { return <div className="section-heading"><div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2></div><button className="text-button" onClick={onClick}>{action}<ArrowRight size={16} /></button></div>; }
 function Empty({ icon, title, text, action }: { icon: ReactNode; title: string; text: string; action?: ReactNode }) { return <div className="empty"><span className="empty-icon">{icon}</span><h2>{title}</h2><p>{text}</p>{action}</div>; }
